@@ -50,6 +50,33 @@ export default class PromoScrollButton extends Component {
     return this.topicTags.some((t) => this.configuredTags.includes(t));
   }
 
+  // Normalize tag to a safe HTML id (kebab-case, lowercase)
+  safeSlug(str) {
+    return (str || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s_]+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+  }
+
+  // Get the first matching promo tag (by settings order)
+  get promoAnchorTag() {
+    if (!this.configuredTags.length || !this.topicTags.length) {
+      return null;
+    }
+
+    // Normalize both sides for case-insensitive matching
+    const normalizedTopicTags = this.topicTags.map((t) => t.toLowerCase());
+    const normalizedConfigTags = this.configuredTags.map((t) => t.toLowerCase());
+
+    // Find first configured tag that exists in topic tags
+    const matchedTag = normalizedConfigTags.find((configTag) =>
+      normalizedTopicTags.includes(configTag)
+    );
+
+    return matchedTag || null;
+  }
+
   get showLabel() {
     return !this.args?.isMobile;
   }
@@ -68,7 +95,7 @@ export default class PromoScrollButton extends Component {
   }
 
   get promoHref() {
-    // Navigate to the canonical first-post URL: /t/:slug/:topicId/1
+    // Navigate to the canonical first-post URL with anchor: /t/:slug/:topicId/1#anchor
     const topic = this.currentTopic;
     if (!topic) {
       return null;
@@ -78,6 +105,13 @@ export default class PromoScrollButton extends Component {
     const base = (topic.url || `/t/${topic.slug}/${topic.id}` || "").replace(/\/+$/, "");
     if (!base) {
       return null;
+    }
+
+    // Add anchor if we have a matching promo tag
+    const anchorTag = this.promoAnchorTag;
+    if (anchorTag) {
+      const anchor = this.safeSlug(anchorTag);
+      return `${base}/1#${anchor}`;
     }
 
     return `${base}/1`;

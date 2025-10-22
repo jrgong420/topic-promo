@@ -3,8 +3,7 @@ en:
     description: Adds a promo to topics (tag based)
     settings:
       example_setting: A description of a setting.
-      promo_trigger_tags: Tags that enable the promo button on topics
-      promo_anchor_heading: Heading text in the first post to scroll to (the button will compute the Discourse heading anchor)
+      promo_trigger_tags: "Tags that enable the promo button. The button will link to [wrap=TAG] content in the first post."
       promo_button_icon: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
 
 

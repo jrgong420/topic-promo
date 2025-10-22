@@ -6,13 +6,7 @@ promo_trigger_tags:
   type: list
   list_type: tag
   default: ""
-  description: "Tags that trigger the 'scroll to promo' button"
-
-
-promo_anchor_heading:
-  type: string
-  default: ""
-  description: "Heading text in the first post to scroll to (the button will compute the Discourse heading anchor)"
+  description: "Tags that trigger the promo button. The button will link to [wrap=TAG] content in the first post."
 
 promo_button_icon:
   type: string
