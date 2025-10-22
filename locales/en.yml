@@ -1,0 +1,5 @@
+en:
+  theme_metadata:
+    description: Adds a promo to topics (tag based)
+    settings:
+      example_setting: A description of a setting.
