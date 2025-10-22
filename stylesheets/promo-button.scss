@@ -1,0 +1,27 @@
+.promo-button {
+  // Inherit core button styling; small tweaks only
+  --promo-gap: var(--space-1);
+  margin-left: var(--space-1);
+
+  // Icon spacing on desktop (when label is visible)
+  .d-icon {
+    margin-right: var(--promo-gap);
+  }
+
+  // Icon-only on mobile (no spacing needed)
+  &--icon-only .d-icon {
+    margin-right: 0;
+  }
+}
+
+// Only show these when mobile-only class is present and viewport is small
+.mobile-only {
+  display: inline-flex;
+}
+
+@media (width >= 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
+

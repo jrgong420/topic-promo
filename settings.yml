@@ -1,2 +1,20 @@
 example_setting:
   default: true
+
+
+promo_trigger_tags:
+  type: list
+  list_type: tag
+  default: ""
+  description: "Tags that trigger the 'scroll to promo' button"
+
+
+promo_anchor_heading:
+  type: string
+  default: ""
+  description: "Heading text in the first post to scroll to (the button will compute the Discourse heading anchor)"
+
+promo_button_icon:
+  type: string
+  default: "gift"
+  description: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
