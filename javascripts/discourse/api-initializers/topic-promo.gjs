@@ -91,7 +91,7 @@ export default apiInitializer((api) => {
 
         // Assign the ID to this element
         node.id = anchor;
-        // Expose the first post ID on the wrap for cookie key suffixing
+        // Expose first post id for cookie suffixing
         try { node.dataset.wrapId = String(post.id); } catch {}
         assignedAnchors.add(anchor);
       });
