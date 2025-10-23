@@ -18,13 +18,8 @@ export default apiInitializer((api) => {
       .replace(/[^a-z0-9-]/g, "");
   };
 
-  // Track processed posts to avoid reprocessing
-  const processedPosts = new Set();
-
-  // Clear state on page change
-  api.onPageChange(() => {
-    processedPosts.clear();
-  });
+  // Note: Do not track processed posts globally. decorateCooked must re-run on SPA re-renders
+  // (e.g., timeline scrubber virtualization) so IDs/classes are re-applied idempotently.
 
   // Decorate cooked content to add anchor IDs to matching .d-wrap elements
   api.decorateCooked(
@@ -36,11 +31,7 @@ export default apiInitializer((api) => {
         return;
       }
 
-      // Avoid reprocessing the same post
-      if (processedPosts.has(post.id)) {
-        return;
-      }
-      processedPosts.add(post.id);
+
 
       const promoTags = getPromoTags();
       if (!promoTags.length) {
@@ -93,19 +84,23 @@ export default apiInitializer((api) => {
         node.id = anchor;
         assignedAnchors.add(anchor);
 
-        // Apply BEM classes for styling variants
+        // Apply BEM classes for styling variants (idempotent - safe to re-apply)
         try {
           node.classList.add("promo-wrap");
           const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
           const allowed = new Set(["left-border", "full-background", "card-elevated"]);
           const v = allowed.has(variant) ? variant : "left-border";
-          node.classList.add(`promo-wrap--${v}`);
+          const variantClass = `promo-wrap--${v}`;
+
+          // Remove any existing variant classes before adding the current one
+          node.classList.remove("promo-wrap--left-border", "promo-wrap--full-background", "promo-wrap--card-elevated");
+          node.classList.add(variantClass);
         } catch {
           // no-op if classList not available
         }
       });
 
-      // Add sentinel element for scroll detection (only once per first post)
+      // Add sentinel element for scroll detection (idempotent - check if exists first)
       if (!element.querySelector(".promo-first-post-sentinel")) {
         const sentinel = document.createElement("div");
         sentinel.className = "promo-first-post-sentinel";
