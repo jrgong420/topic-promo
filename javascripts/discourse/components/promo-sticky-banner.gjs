@@ -4,6 +4,7 @@ import { action } from "@ember/object";
 import { service } from "@ember/service";
 import { getOwner } from "@ember/owner";
 import { htmlSafe } from "@ember/template";
+import { on } from "@ember/modifier";
 import { iconHTML } from "discourse/lib/icon-library";
 import { i18n } from "discourse-i18n";
 
