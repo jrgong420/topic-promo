@@ -13,6 +13,21 @@ export default class PromoStickyBanner extends Component {
   @service router;
 
   @tracked dismissed = false;
+  @tracked anchorFound = false;
+  _anchorPollId = null;
+
+  constructor() {
+    super(...arguments);
+    this._startAnchorPoll();
+  }
+
+  willDestroy() {
+    super.willDestroy(...arguments);
+    if (this._anchorPollId) {
+      clearInterval(this._anchorPollId);
+      this._anchorPollId = null;
+    }
+  }
 
   get currentTopic() {
     const argTopic = (
@@ -85,6 +100,24 @@ export default class PromoStickyBanner extends Component {
     }
   }
 
+  _updateAnchorFound() {
+    this.anchorFound = !!this.anchorElement;
+  }
+
+  _startAnchorPoll() {
+    // Poll for a short period to allow first post render + decorateCooked
+    let attempts = 0;
+    const maxAttempts = 50; // ~15s at 300ms
+    this._anchorPollId = setInterval(() => {
+      attempts++;
+      this._updateAnchorFound();
+      if (this.anchorFound || attempts >= maxAttempts) {
+        clearInterval(this._anchorPollId);
+        this._anchorPollId = null;
+      }
+    }, 300);
+  }
+
   // Post ID to suffix cookie name (set by topic-promo initializer as data-wrap-id)
   get firstPostIdForCookie() {
     return this.anchorElement?.dataset?.wrapId || null;
@@ -138,7 +171,7 @@ export default class PromoStickyBanner extends Component {
       !!this.currentTopic &&
       this.deviceAllowed &&
       !!this.matchedTag &&
-      !!this.anchorElement &&
+      this.anchorFound &&
       !this.isDismissedByCookie &&
       !this.dismissed
     );
