@@ -1,0 +1,78 @@
+/* Promo Wrap Container Styling
+ * Targets .d-wrap[data-wrap] elements that have been assigned an ID
+ * by the topic-promo.gjs initializer (matching configured promo tags)
+ */
+
+// Base styling for promo containers (only those with IDs from promo tags)
+.cooked .d-wrap[data-wrap][id] {
+  // CSS custom properties for theming
+  --promo-accent: var(--#{$promo-wrap-accent});
+  --promo-accent-low: var(--#{$promo-wrap-accent}-low);
+  --promo-pad: var(--#{$promo-wrap-spacing});
+
+  // Visual separation and emphasis
+  background: var(--primary-very-low);
+  border: 1px solid var(--primary-low);
+  border-inline-start: 3px solid var(--promo-accent);
+  border-radius: var(--border-radius);
+  position: relative; // for highlight overlay
+
+  // Spacing
+  padding: var(--promo-pad);
+  margin: var(--space-4) 0;
+
+  // Subtle elevation
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  // Smooth anchor positioning (avoids hiding under sticky header)
+  scroll-margin-top: calc(var(--header-offset, 60px) + var(--space-4));
+
+  // Ensure content doesn't overflow
+  overflow-wrap: break-word;
+}
+
+// Overlay-based highlight to ensure visibility over any base background
+@media (prefers-reduced-motion: no-preference) {
+  .cooked .d-wrap[data-wrap][id]:target::after,
+  .cooked .d-wrap[data-wrap][id].promo-flash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: var(--promo-accent-low, var(--tertiary-low));
+    animation: promo-wrap-flash 1.25s ease-out;
+    z-index: 1;
+  }
+}
+
+@keyframes promo-wrap-flash {
+  0% { background: var(--promo-accent-low, var(--tertiary-low)); }
+  100% { background: transparent; }
+}
+
+// Mobile: compact padding option
+@media (max-width: 767px) {
+  @if $promo-wrap-compact-mobile {
+    .cooked .d-wrap[data-wrap][id] {
+      // Reduce padding by one step on mobile
+      @if $promo-wrap-spacing == "space-4" {
+        --promo-pad: var(--space-3);
+      } @else if $promo-wrap-spacing == "space-3" {
+        --promo-pad: var(--space-2);
+      }
+      // space-2 stays at space-2 (minimum)
+    }
+  }
+}
+
+
+// Reduced motion fallback: static outline instead of animation
+@media (prefers-reduced-motion: reduce) {
+  .cooked .d-wrap[data-wrap][id]:target,
+  .cooked .d-wrap[data-wrap][id].promo-flash {
+    outline: 2px solid var(--highlight);
+    outline-offset: 2px;
+  }
+}
+

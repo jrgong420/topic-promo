@@ -1,1 +1,4 @@
-// Theme's SCSS
+// Theme's SCSS entrypoint
+// Import component styles so they are included by Discourse
+@import "../stylesheets/promo-button";
+@import "../stylesheets/promo-wrap";

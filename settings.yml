@@ -12,3 +12,27 @@ promo_button_icon:
   type: string
   default: "gift"
   description: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
+
+promo_wrap_accent:
+  type: enum
+  default: "tertiary"
+  choices:
+    - tertiary
+    - success
+    - love
+    - danger
+  description: "Accent color for promo containers (left border highlight)"
+
+promo_wrap_spacing:
+  type: enum
+  default: "space-3"
+  choices:
+    - space-2
+    - space-3
+    - space-4
+  description: "Padding size for promo containers"
+
+promo_wrap_compact_mobile:
+  type: bool
+  default: true
+  description: "Reduce promo container padding on mobile devices"
