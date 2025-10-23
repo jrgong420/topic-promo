@@ -92,6 +92,17 @@ export default apiInitializer((api) => {
         // Assign the ID to this element
         node.id = anchor;
         assignedAnchors.add(anchor);
+
+        // Apply BEM classes for styling variants
+        try {
+          node.classList.add("promo-wrap");
+          const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
+          const allowed = new Set(["left-border", "full-background", "card-elevated"]);
+          const v = allowed.has(variant) ? variant : "left-border";
+          node.classList.add(`promo-wrap--${v}`);
+        } catch {
+          // no-op if classList not available
+        }
       });
 
       // Add sentinel element for scroll detection (only once per first post)

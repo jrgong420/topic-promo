@@ -5,6 +5,10 @@ en:
       example_setting: A description of a setting.
       promo_trigger_tags: "Tags that enable the promo button. The button will link to [wrap=TAG] content in the first post."
       promo_button_icon: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
+      promo_wrap_accent: "Accent color for promo containers (applied to borders, backgrounds, and focus states)"
+      promo_wrap_spacing: "Padding size for promo containers"
+      promo_wrap_compact_mobile: "Reduce promo container padding on mobile devices"
+      promo_block_style: "Style variant for promo containers (left-border, full-background, card-elevated)"
       sticky_banner_text: "Text displayed inside the sticky banner"
       sticky_banner_cookie_name: "Base name for the dismissal cookie (suffixed with first-post ID)"
       sticky_banner_cookie_lifespan: "Dismissal cookie lifetime in days (0 = no persistence and banner appears every time)"

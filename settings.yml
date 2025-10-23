@@ -21,7 +21,7 @@ promo_wrap_accent:
     - success
     - love
     - danger
-  description: "Accent color for promo containers (left border highlight)"
+  description: "Accent color for promo containers (used in borders, backgrounds, and focus states)"
 
 promo_wrap_spacing:
   type: enum
@@ -37,6 +37,16 @@ promo_wrap_compact_mobile:
   default: true
   description: "Reduce promo container padding on mobile devices"
 
+
+
+promo_block_style:
+  type: enum
+  default: "left-border"
+  choices:
+    - left-border
+    - full-background
+    - card-elevated
+  description: "Style variant for promo containers"
 
 
 sticky_banner_text:
