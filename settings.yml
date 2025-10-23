@@ -36,3 +36,27 @@ promo_wrap_compact_mobile:
   type: bool
   default: true
   description: "Reduce promo container padding on mobile devices"
+
+
+
+sticky_banner_text:
+  type: string
+  default: "See the promo"
+
+sticky_banner_cookie_name:
+  type: string
+  default: "sticky_banner_dismissed_post"
+
+sticky_banner_cookie_lifespan:
+  type: integer
+  default: 30
+  min: 1
+  max: 365
+
+display_sticky_banner_mobile:
+  type: bool
+  default: true
+
+display_sticky_banner_desktop:
+  type: bool
+  default: true

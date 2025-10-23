@@ -5,11 +5,19 @@ en:
       example_setting: A description of a setting.
       promo_trigger_tags: "Tags that enable the promo button. The button will link to [wrap=TAG] content in the first post."
       promo_button_icon: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
-      promo_wrap_accent: "Accent color for the left border of promo containers (tertiary = blue, success = green, love = pink, danger = red)"
-      promo_wrap_spacing: "Padding size inside promo containers (space-2 = compact, space-3 = comfortable, space-4 = spacious)"
-      promo_wrap_compact_mobile: "Reduce promo container padding on mobile devices for better space efficiency"
+
+      sticky_banner_text: "Text displayed inside the sticky banner"
+      sticky_banner_cookie_name: "Base name for the dismissal cookie (post ID will be appended)"
+      sticky_banner_cookie_lifespan: "Days to remember dismissal"
+      display_sticky_banner_mobile: "Show the sticky banner on mobile devices"
+      display_sticky_banner_desktop: "Show the sticky banner on desktop devices"
+
 
 
   js:
     promo_button:
       label: "Scroll to promo"
+
+    promo_banner:
+      label: "Scroll to promo"
+      dismiss: "Dismiss banner"
