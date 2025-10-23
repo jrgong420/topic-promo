@@ -18,6 +18,17 @@ export default class PromoStickyBanner extends Component {
 
   constructor() {
     super(...arguments);
+    this._routeDidChange = () => {
+      // Reset per-view state when navigating between routes/topics
+      this.dismissed = false;
+      this.anchorFound = false;
+      if (!this._anchorPollId) {
+        this._startAnchorPoll();
+      }
+    };
+    try {
+      this.router?.on?.("routeDidChange", this._routeDidChange);
+    } catch {}
     this._startAnchorPoll();
   }
 
@@ -27,6 +38,9 @@ export default class PromoStickyBanner extends Component {
       clearInterval(this._anchorPollId);
       this._anchorPollId = null;
     }
+    try {
+      this.router?.off?.("routeDidChange", this._routeDidChange);
+    } catch {}
   }
 
   get currentTopic() {
