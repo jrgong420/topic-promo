@@ -1,11 +1,12 @@
 import { apiInitializer } from "discourse/lib/api";
-import { schedule } from "@ember/runloop";
 
 export default apiInitializer((api) => {
   // Parse configured promo tags
   const getPromoTags = () => {
     const raw = (settings.promo_trigger_tags || "").split("|");
-    return raw.map((t) => t.trim().toLowerCase()).filter(Boolean);
+    return raw
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
   };
 
   // Normalize tag to a safe HTML id (kebab-case, lowercase)
@@ -17,90 +18,94 @@ export default apiInitializer((api) => {
       .replace(/[^a-z0-9-]/g, "");
   };
 
-  // Flash helper: add a transient class to trigger CSS animation
-  function flashEl(el) {
-    if (!el) return;
-    el.classList.remove("promo-flash");
-    // Force reflow so re-adding the class retriggers animation
-    void el.offsetWidth;
-    el.classList.add("promo-flash");
+  // Track processed posts to avoid reprocessing
+  const processedPosts = new Set();
 
-    // Clean up after animation
-    el.addEventListener(
-      "animationend",
-      () => el.classList.remove("promo-flash"),
-      { once: true }
-    );
-    setTimeout(() => el.classList.remove("promo-flash"), 1600);
-  }
-
-  // If hash is present and target exists, flash it
-  function attemptHighlightByHash() {
-    try {
-      const raw = window.location.hash || "";
-      const id = decodeURIComponent(raw.replace(/^#/, ""));
-      if (!id) return;
-      const el = document.getElementById(id);
-      if (!el || !el.matches?.(".d-wrap[data-wrap][id]")) return;
-      flashEl(el);
-    } catch {
-      // no-op
-    }
-  }
-
-  // On navigation, try to highlight after render (in case target is already present)
+  // Clear state on page change
   api.onPageChange(() => {
-    schedule("afterRender", attemptHighlightByHash);
+    processedPosts.clear();
   });
 
   // Decorate cooked content to add anchor IDs to matching .d-wrap elements
-  // This runs every time a post's cooked HTML is inserted (SPA + virtualization safe)
   api.decorateCooked(
     (elem, helper) => {
       const post = helper?.getModel?.();
+
       // Only process the first post
-      if (!post || post.post_number !== 1) return;
+      if (!post || post.post_number !== 1) {
+        return;
+      }
+
+      // Avoid reprocessing the same post
+      if (processedPosts.has(post.id)) {
+        return;
+      }
+      processedPosts.add(post.id);
 
       const promoTags = getPromoTags();
-      if (!promoTags.length) return;
+      if (!promoTags.length) {
+        return;
+      }
 
       // Convert elem to native DOM element if it's a jQuery object
       let element = elem;
-      if (
-        elem &&
-        (typeof elem.jquery !== "undefined" || typeof elem.get === "function")
-      ) {
+
+      // Check if it's a jQuery object
+      if (elem && (typeof elem.jquery !== "undefined" || typeof elem.get === "function")) {
+        // It's a jQuery object, get the native DOM element
         element = elem.get ? elem.get(0) : elem[0];
       }
-      if (!element || typeof element.querySelectorAll !== "function") return;
 
-      // Track anchors assigned within this cooked fragment (avoid duplicates)
+      // Guard: ensure we have a valid DOM element with querySelectorAll
+      if (!element ||
+          typeof element !== "object" ||
+          typeof element.querySelectorAll !== "function") {
+        return;
+      }
+
+      // Track which anchor IDs we've already assigned (one per tag)
       const assignedAnchors = new Set();
 
+      // Find all .d-wrap elements with data-wrap attribute
       element.querySelectorAll(".d-wrap[data-wrap]").forEach((node) => {
         const rawTag = node.getAttribute("data-wrap") || "";
         const normalizedTag = rawTag.trim().toLowerCase();
-        if (!promoTags.includes(normalizedTag)) return;
 
-        const anchor = safeSlug(normalizedTag);
-        if (assignedAnchors.has(anchor)) return;
-
-        // If a descendant already carries this id (e.g., heading anchor), move it to the wrap
-        const existing = element.querySelector(`#${CSS.escape(anchor)}`);
-        if (existing && existing !== node) {
-          existing.removeAttribute("id");
+        // Check if this wrap's tag matches any promo trigger tag
+        if (!promoTags.includes(normalizedTag)) {
+          return;
         }
 
-        // Assign the ID to the wrap itself
+        // Generate safe anchor ID
+        const anchor = safeSlug(normalizedTag);
+
+        // Skip if we've already assigned this anchor or if it already exists in the DOM
+        if (assignedAnchors.has(anchor)) {
+          return;
+        }
+
+        // Check for collision with existing IDs (e.g., heading anchors)
+        if (element.querySelector(`#${CSS.escape(anchor)}`)) {
+          return;
+        }
+
+        // Assign the ID to this element
         node.id = anchor;
         assignedAnchors.add(anchor);
-
-        // If current URL hash matches this anchor, flash after render
-        if ((window.location.hash || "") === `#${anchor}`) {
-          schedule("afterRender", () => flashEl(node));
-        }
       });
+
+      // Add sentinel element for scroll detection (only once per first post)
+      if (!element.querySelector(".promo-first-post-sentinel")) {
+        const sentinel = document.createElement("div");
+        sentinel.className = "promo-first-post-sentinel";
+        sentinel.setAttribute("aria-hidden", "true");
+        element.appendChild(sentinel);
+        try {
+          // eslint-disable-next-line no-console
+          console.debug("[Topic Promo][decorateCooked] added sentinel", { postId: post.id });
+        } catch {}
+      }
     },
-    { id: "promo-wrap-anchor", onlyStream: true }
+    { id: "promo-wrap-anchor" }
   );
 });

@@ -1,0 +1,72 @@
+/* Sentinel element for scroll detection (invisible) */
+.promo-first-post-sentinel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/* Sticky promo banner below header */
+.promo-banner {
+  position: fixed;
+  inset-inline: 0;
+  top: calc(var(--header-offset, 3.5rem) + var(--space-2));
+  z-index: 1100; // above content but below menus
+  pointer-events: auto;
+
+  .promo-banner__inner {
+    width: min(100%, var(--d-max-width, 1110px));
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    background: var(--tertiary-low);
+    color: var(--primary);
+    border: 1px solid var(--primary-low);
+    border-radius: var(--border-radius);
+    padding: var(--space-2) var(--space-3);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  &:focus,
+  &:focus-visible {
+    outline: 2px solid var(--tertiary);
+    outline-offset: 2px;
+  }
+
+  .promo-banner__icon {
+    display: inline-flex;
+    .d-icon { margin-inline-end: 0; }
+  }
+
+  .promo-banner__label {
+    font-weight: 600;
+    line-height: var(--line-height-medium);
+  }
+
+  .promo-banner__dismiss {
+    margin-inline-start: auto;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--primary-high);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--primary-very-low);
+    }
+  }
+}
+
+@media (min-width: 768px) {
+  .promo-banner {
+    top: calc(var(--header-offset, 3.5rem) + var(--space-3));
+  }
+}
+
