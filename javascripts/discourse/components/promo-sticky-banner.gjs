@@ -186,13 +186,6 @@ export default class PromoStickyBanner extends Component {
     }
   }
 
-  get ariaLabel() {
-    return i18n(themePrefix("js.promo_banner.label"));
-  }
-
-  get dismissAriaLabel() {
-    return i18n(themePrefix("js.promo_banner.dismiss"));
-  }
 
   @action onClick(e) {
     if (!this.promoHref) return;
@@ -225,7 +218,7 @@ export default class PromoStickyBanner extends Component {
         class="promo-banner"
         role="button"
         tabindex="0"
-        aria-label={{this.ariaLabel}}
+        aria-label={{i18n (themePrefix "js.promo_banner.label")}}
         {{on "click" this.onClick}}
         {{on "keydown" this.onKeydown}}
       >
@@ -235,7 +228,7 @@ export default class PromoStickyBanner extends Component {
           <button
             type="button"
             class="promo-banner__dismiss"
-            aria-label={{this.dismissAriaLabel}}
+            aria-label={{i18n (themePrefix "js.promo_banner.dismiss")}}
             {{on "click" this.dismiss}}
           >
             ×
