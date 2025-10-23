@@ -35,7 +35,6 @@ export default apiInitializer((api) => {
       if (!post || post.post_number !== 1) {
         return;
       }
-      try { console.debug("[Topic Promo][decorateCooked] first post", { postId: post.id }); } catch {}
 
       // Avoid reprocessing the same post
       if (processedPosts.has(post.id)) {
@@ -82,23 +81,30 @@ export default apiInitializer((api) => {
 
         // Skip if we've already assigned this anchor or if it already exists in the DOM
         if (assignedAnchors.has(anchor)) {
-          try { console.debug("[Topic Promo][decorateCooked] anchor already assigned for", { anchor, tag: normalizedTag }); } catch {}
           return;
         }
 
         // Check for collision with existing IDs (e.g., heading anchors)
         if (element.querySelector(`#${CSS.escape(anchor)}`)) {
-          try { console.debug("[Topic Promo][decorateCooked] anchor collision", { anchor }); } catch {}
           return;
         }
 
         // Assign the ID to this element
         node.id = anchor;
-        // Expose first post id for cookie suffixing
-        try { node.dataset.wrapId = String(post.id); } catch {}
-        try { console.debug("[Topic Promo][decorateCooked] assigned anchor", { anchor, tag: normalizedTag, postId: post.id }); } catch {}
         assignedAnchors.add(anchor);
       });
+
+      // Add sentinel element for scroll detection (only once per first post)
+      if (!element.querySelector(".promo-first-post-sentinel")) {
+        const sentinel = document.createElement("div");
+        sentinel.className = "promo-first-post-sentinel";
+        sentinel.setAttribute("aria-hidden", "true");
+        element.appendChild(sentinel);
+        try {
+          // eslint-disable-next-line no-console
+          console.debug("[Topic Promo][decorateCooked] added sentinel", { postId: post.id });
+        } catch {}
+      }
     },
     { id: "promo-wrap-anchor" }
   );

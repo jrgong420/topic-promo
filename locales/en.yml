@@ -7,7 +7,7 @@ en:
       promo_button_icon: "Enter a Font Awesome icon name without the 'fa-' prefix (e.g., 'gift', 'chevron-up', 'arrow-up')"
       sticky_banner_text: "Text displayed inside the sticky banner"
       sticky_banner_cookie_name: "Base name for the dismissal cookie (suffixed with first-post ID)"
-      sticky_banner_cookie_lifespan: "Dismissal cookie lifetime in days"
+      sticky_banner_cookie_lifespan: "Dismissal cookie lifetime in days (0 = no persistence and banner appears every time)"
       display_sticky_banner_mobile: "Show sticky banner on mobile"
       display_sticky_banner_desktop: "Show sticky banner on desktop"
 

@@ -5,6 +5,7 @@ import { service } from "@ember/service";
 import { getOwner } from "@ember/owner";
 import { htmlSafe } from "@ember/template";
 import { on } from "@ember/modifier";
+import { schedule } from "@ember/runloop";
 import { iconHTML } from "discourse/lib/icon-library";
 import { i18n } from "discourse-i18n";
 
@@ -14,7 +15,9 @@ export default class PromoStickyBanner extends Component {
 
   @tracked dismissed = false;
   @tracked anchorFound = false;
+  @tracked scrolledPastFirstPost = false;
   _anchorPollId = null;
+  _intersectionObserver = null;
 
   _log(...args) {
     try {
@@ -34,6 +37,7 @@ export default class PromoStickyBanner extends Component {
       anchorId: this.anchorId,
       anchorFound: this.anchorFound,
       hasAnchorEl: !!this.anchorElement,
+      scrolledPastFirstPost: this.scrolledPastFirstPost,
       cookieKey: this.cookieKey,
       cookieVal: this.cookieKey ? this._readCookie(this.cookieKey) : null,
       deviceAllowed: this.deviceAllowed,
@@ -53,15 +57,26 @@ export default class PromoStickyBanner extends Component {
       // Reset per-view state when navigating between routes/topics
       this.dismissed = false;
       this.anchorFound = false;
+      this._teardownScrollObserver();
+      this._initScrollStateFromURL();
       if (!this._anchorPollId) {
         this._startAnchorPoll();
       }
+      // Setup scroll observer after render
+      schedule("afterRender", () => {
+        this._setupScrollObserver();
+      });
       this._stateSummary("routeDidChange-reset");
     };
     try {
       this.router?.on?.("routeDidChange", this._routeDidChange);
     } catch {}
+    this._initScrollStateFromURL();
     this._startAnchorPoll();
+    // Setup scroll observer after initial render
+    schedule("afterRender", () => {
+      this._setupScrollObserver();
+    });
     this._stateSummary("constructor");
   }
 
@@ -71,6 +86,7 @@ export default class PromoStickyBanner extends Component {
       clearInterval(this._anchorPollId);
       this._anchorPollId = null;
     }
+    this._teardownScrollObserver();
     try {
       this.router?.off?.("routeDidChange", this._routeDidChange);
     } catch {}
@@ -169,8 +185,91 @@ export default class PromoStickyBanner extends Component {
         clearInterval(this._anchorPollId);
         this._anchorPollId = null;
         this._log("anchor poll end", { attempts, found: this.anchorFound });
+        // Setup scroll observer once anchor is found or polling ends
+        schedule("afterRender", () => {
+          this._setupScrollObserver();
+        });
       }
     }, 300);
+  }
+
+  // Get header offset for scroll calculations
+  _getHeaderOffset() {
+    try {
+      const cssVar = getComputedStyle(document.documentElement)
+        .getPropertyValue("--header-offset");
+      const parsed = parseInt(cssVar || "60", 10);
+      return Math.max(0, parsed || 60);
+    } catch {
+      return 60; // Fallback
+    }
+  }
+
+  // Initialize scroll state from URL (for deep links to post > 1)
+  _initScrollStateFromURL() {
+    try {
+      const match = window.location.pathname.match(/\/t\/[^/]+\/\d+\/(\d+)/);
+      if (match) {
+        const postNumber = parseInt(match[1], 10);
+        this.scrolledPastFirstPost = postNumber > 1;
+        this._log("init scroll state from URL", { postNumber, scrolledPast: this.scrolledPastFirstPost });
+      } else {
+        this.scrolledPastFirstPost = false;
+      }
+    } catch {
+      this.scrolledPastFirstPost = false;
+    }
+  }
+
+  // Setup IntersectionObserver to detect when user scrolls past first post
+  _setupScrollObserver() {
+    // Clean up any existing observer first
+    this._teardownScrollObserver();
+
+    const sentinel = document.querySelector(".promo-first-post-sentinel");
+    if (!sentinel) {
+      this._log("scroll observer: sentinel not found");
+      return;
+    }
+
+    try {
+      const headerOffset = this._getHeaderOffset();
+      const rootMargin = `-${headerOffset}px 0px 0px 0px`;
+
+      this._intersectionObserver = new IntersectionObserver(
+        ([entry]) => {
+          // When sentinel is NOT intersecting (not visible), user has scrolled past it
+          const pastFirstPost = !entry.isIntersecting;
+          if (this.scrolledPastFirstPost !== pastFirstPost) {
+            this.scrolledPastFirstPost = pastFirstPost;
+            this._log("scroll state changed", {
+              scrolledPast: pastFirstPost,
+              isIntersecting: entry.isIntersecting
+            });
+            this._stateSummary("scroll-changed");
+          }
+        },
+        {
+          root: null, // viewport
+          rootMargin,
+          threshold: 0,
+        }
+      );
+
+      this._intersectionObserver.observe(sentinel);
+      this._log("scroll observer setup", { headerOffset, rootMargin });
+    } catch (error) {
+      this._log("scroll observer setup failed", error);
+    }
+  }
+
+  // Teardown IntersectionObserver
+  _teardownScrollObserver() {
+    if (this._intersectionObserver) {
+      this._intersectionObserver.disconnect();
+      this._intersectionObserver = null;
+      this._log("scroll observer teardown");
+    }
   }
 
   // Post ID to suffix cookie name (set by topic-promo initializer as data-wrap-id)
@@ -211,6 +310,11 @@ export default class PromoStickyBanner extends Component {
   }
 
   get isDismissedByCookie() {
+    // If cookie lifespan is 0, never persist dismissal (banner appears every time)
+    const lifespan = Number(settings.sticky_banner_cookie_lifespan || 30);
+    if (lifespan === 0) {
+      return false;
+    }
     const key = this.cookieKey;
     if (!key) return false;
     return this._readCookie(key) === "1";
@@ -227,6 +331,7 @@ export default class PromoStickyBanner extends Component {
       this.deviceAllowed &&
       !!this.matchedTag &&
       this.anchorFound &&
+      this.scrolledPastFirstPost &&
       !this.isDismissedByCookie &&
       !this.dismissed
     );
@@ -260,12 +365,20 @@ export default class PromoStickyBanner extends Component {
 
   @action dismiss(e) {
     e?.stopPropagation?.();
-    const key = this.cookieKey;
-    if (key) {
-      const days = Math.max(1, Math.min(365, Number(settings.sticky_banner_cookie_lifespan || 30)));
-      this._log("dismiss banner", { cookieKey: key, days });
-      this._setCookie(key, "1", days);
+    const lifespan = Number(settings.sticky_banner_cookie_lifespan || 30);
+
+    // Only set cookie if lifespan > 0 (lifespan = 0 means no persistence)
+    if (lifespan > 0) {
+      const key = this.cookieKey;
+      if (key) {
+        const days = Math.max(1, Math.min(365, lifespan));
+        this._log("dismiss banner", { cookieKey: key, days });
+        this._setCookie(key, "1", days);
+      }
+    } else {
+      this._log("dismiss banner (no cookie, lifespan=0)");
     }
+
     this.dismissed = true;
     this._stateSummary("dismissed");
   }
