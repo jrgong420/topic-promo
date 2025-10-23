@@ -16,20 +16,53 @@ export default class PromoStickyBanner extends Component {
   @tracked anchorFound = false;
   _anchorPollId = null;
 
+  _log(...args) {
+    try {
+      // eslint-disable-next-line no-console
+      console.debug("[Topic Promo][StickyBanner]", ...args);
+    } catch {}
+  }
+
+  _stateSummary(label = "state") {
+    const topic = this.currentTopic;
+    const summary = {
+      label,
+      route: this.router?.currentRouteName,
+      topicId: topic?.id,
+      topicSlug: topic?.slug,
+      matchedTag: this.matchedTag,
+      anchorId: this.anchorId,
+      anchorFound: this.anchorFound,
+      hasAnchorEl: !!this.anchorElement,
+      cookieKey: this.cookieKey,
+      cookieVal: this.cookieKey ? this._readCookie(this.cookieKey) : null,
+      deviceAllowed: this.deviceAllowed,
+      isMobile: !!this.site?.mobileView,
+      dismissed: this.dismissed,
+      shouldShow: this.shouldShow,
+      href: this.promoHref,
+    };
+    this._log("state", summary);
+  }
+
   constructor() {
     super(...arguments);
+    this._log("constructor init", { outletArgs: Object.keys(this.args?.outletArgs || {}) });
     this._routeDidChange = () => {
+      this._log("routeDidChange");
       // Reset per-view state when navigating between routes/topics
       this.dismissed = false;
       this.anchorFound = false;
       if (!this._anchorPollId) {
         this._startAnchorPoll();
       }
+      this._stateSummary("routeDidChange-reset");
     };
     try {
       this.router?.on?.("routeDidChange", this._routeDidChange);
     } catch {}
     this._startAnchorPoll();
+    this._stateSummary("constructor");
   }
 
   willDestroy() {
@@ -122,12 +155,20 @@ export default class PromoStickyBanner extends Component {
     // Poll for a short period to allow first post render + decorateCooked
     let attempts = 0;
     const maxAttempts = 50; // ~15s at 300ms
+    this._log("anchor poll start", { anchorId: this.anchorId, maxAttempts });
     this._anchorPollId = setInterval(() => {
       attempts++;
+      const wasFound = this.anchorFound;
       this._updateAnchorFound();
+      this._log("anchor poll attempt", attempts, { anchorId: this.anchorId, found: this.anchorFound });
+      if (!wasFound && this.anchorFound) {
+        this._log("anchor found", { anchorId: this.anchorId, hasAnchorEl: !!this.anchorElement });
+        this._stateSummary("anchor-found");
+      }
       if (this.anchorFound || attempts >= maxAttempts) {
         clearInterval(this._anchorPollId);
         this._anchorPollId = null;
+        this._log("anchor poll end", { attempts, found: this.anchorFound });
       }
     }, 300);
   }
@@ -205,6 +246,7 @@ export default class PromoStickyBanner extends Component {
     if (!this.promoHref) return;
     // Ignore if clicking the dismiss button
     if (e?.target?.closest?.(".promo-banner__dismiss")) return;
+    this._log("click banner", { href: this.promoHref });
     window.location.assign(this.promoHref);
   }
 
@@ -221,9 +263,11 @@ export default class PromoStickyBanner extends Component {
     const key = this.cookieKey;
     if (key) {
       const days = Math.max(1, Math.min(365, Number(settings.sticky_banner_cookie_lifespan || 30)));
+      this._log("dismiss banner", { cookieKey: key, days });
       this._setCookie(key, "1", days);
     }
     this.dismissed = true;
+    this._stateSummary("dismissed");
   }
 
   <template>

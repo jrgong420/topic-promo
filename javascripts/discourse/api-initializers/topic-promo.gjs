@@ -35,6 +35,7 @@ export default apiInitializer((api) => {
       if (!post || post.post_number !== 1) {
         return;
       }
+      try { console.debug("[Topic Promo][decorateCooked] first post", { postId: post.id }); } catch {}
 
       // Avoid reprocessing the same post
       if (processedPosts.has(post.id)) {
@@ -81,11 +82,13 @@ export default apiInitializer((api) => {
 
         // Skip if we've already assigned this anchor or if it already exists in the DOM
         if (assignedAnchors.has(anchor)) {
+          try { console.debug("[Topic Promo][decorateCooked] anchor already assigned for", { anchor, tag: normalizedTag }); } catch {}
           return;
         }
 
         // Check for collision with existing IDs (e.g., heading anchors)
         if (element.querySelector(`#${CSS.escape(anchor)}`)) {
+          try { console.debug("[Topic Promo][decorateCooked] anchor collision", { anchor }); } catch {}
           return;
         }
 
@@ -93,6 +96,7 @@ export default apiInitializer((api) => {
         node.id = anchor;
         // Expose first post id for cookie suffixing
         try { node.dataset.wrapId = String(post.id); } catch {}
+        try { console.debug("[Topic Promo][decorateCooked] assigned anchor", { anchor, tag: normalizedTag, postId: post.id }); } catch {}
         assignedAnchors.add(anchor);
       });
     },
