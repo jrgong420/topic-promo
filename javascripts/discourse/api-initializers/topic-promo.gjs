@@ -32,10 +32,11 @@ export default apiInitializer((api) => {
   api.decorateCooked(
     (elem, helper) => {
       const post = helper?.getModel?.();
-      if (!post) {
+
+      // Only process the first post
+      if (!post || post.post_number !== 1) {
         return;
       }
-      const isFirstPost = post.post_number === 1;
 
       // Avoid reprocessing the same post
       if (processedPosts.has(post.id)) {
@@ -76,56 +77,53 @@ export default apiInitializer((api) => {
         if (!promoTags.includes(normalizedTag)) {
           return;
         }
-        // Apply promo block style classes based on theme setting
-        node.classList.add("promo-wrap");
-        const variant = (settings.promo_block_style || "left-border").trim();
-        if (variant === "full-background") {
-          node.classList.add("promo-wrap--full-background");
-        } else if (variant === "card-elevated") {
-          node.classList.add("promo-wrap--card-elevated");
-        }
 
-        // Badge support: set CSS var for icon and inject icon element
+        // Badge icon injection (inline SVG)
         const badgeText = node.getAttribute("data-badge");
         if (badgeText && badgeText.trim()) {
+          let svgIcon = null;
           try {
             const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
-            const svgIcon = iconHTML(iconName);
-            const dataUrl = `url("data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}")`;
-            node.style.setProperty("--promo-badge-icon", dataUrl);
+            svgIcon = iconHTML(iconName);
           } catch (e) {
-            // Fallback: proceed without icon if generation fails
             // eslint-disable-next-line no-console
-            console.warn("[Topic Promo] Failed to set badge icon:", e);
+            console.warn("[Topic Promo] Failed to generate badge icon:", e);
           }
 
-          // Ensure a single icon element exists (idempotent)
-          if (!node.querySelector(":scope > .promo-wrap__badge-icon")) {
-            const iconEl = document.createElement("span");
+          let iconEl = node.querySelector(":scope > .promo-wrap__badge-icon");
+          if (!iconEl) {
+            iconEl = document.createElement("span");
             iconEl.className = "promo-wrap__badge-icon";
             iconEl.setAttribute("aria-hidden", "true");
             node.appendChild(iconEl);
           }
+
+          if (svgIcon) {
+            iconEl.innerHTML = svgIcon;
+          }
+
+          // Disable mask-based rendering for inline SVG approach
+          iconEl.style.background = "none";
+          iconEl.style.maskImage = "none";
+          iconEl.style.webkitMaskImage = "none";
         }
 
         // Generate safe anchor ID
         const anchor = safeSlug(normalizedTag);
 
-        if (isFirstPost) {
-          // Skip if we've already assigned this anchor or if it already exists in the DOM
-          if (assignedAnchors.has(anchor)) {
-            return;
-          }
-
-          // Check for collision with existing IDs (e.g., heading anchors)
-          if (element.querySelector(`#${CSS.escape(anchor)}`)) {
-            return;
-          }
-
-          // Assign the ID to this element
-          node.id = anchor;
-          assignedAnchors.add(anchor);
+        // Skip if we've already assigned this anchor or if it already exists in the DOM
+        if (assignedAnchors.has(anchor)) {
+          return;
         }
+
+        // Check for collision with existing IDs (e.g., heading anchors)
+        if (element.querySelector(`#${CSS.escape(anchor)}`)) {
+          return;
+        }
+
+        // Assign the ID to this element
+        node.id = anchor;
+        assignedAnchors.add(anchor);
       });
     },
     { id: "promo-wrap-anchor" }
