@@ -1,6 +1,7 @@
 import { apiInitializer } from "discourse/lib/api";
 import { iconHTML } from "discourse/lib/icon-library";
 
+
 export default apiInitializer((api) => {
   // Parse configured promo tags
   const getPromoTags = () => {
@@ -77,6 +78,30 @@ export default apiInitializer((api) => {
           return;
         }
 
+
+        // Badge support: set CSS var for icon and inject icon element
+        const badgeText = node.getAttribute("data-badge");
+        if (badgeText && badgeText.trim()) {
+          try {
+            const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
+            const svgIcon = iconHTML(iconName);
+            const dataUrl = `url("data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}")`;
+            node.style.setProperty("--promo-badge-icon", dataUrl);
+          } catch (e) {
+            // Fallback: proceed without icon if generation fails
+            // eslint-disable-next-line no-console
+            console.warn("[Topic Promo] Failed to set badge icon:", e);
+          }
+
+          // Ensure a single icon element exists (idempotent)
+          if (!node.querySelector(":scope > .promo-wrap__badge-icon")) {
+            const iconEl = document.createElement("span");
+            iconEl.className = "promo-wrap__badge-icon";
+            iconEl.setAttribute("aria-hidden", "true");
+            node.appendChild(iconEl);
+          }
+        }
+
         // Generate safe anchor ID
         const anchor = safeSlug(normalizedTag);
 
@@ -93,43 +118,6 @@ export default apiInitializer((api) => {
         // Assign the ID to this element
         node.id = anchor;
         assignedAnchors.add(anchor);
-
-        // Apply BEM classes for styling variants
-        node.classList.add("promo-wrap");
-        const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
-        const allowedVariants = new Set(["left-border", "full-background", "card-elevated"]);
-        const validVariant = allowedVariants.has(variant) ? variant : "left-border";
-        const variantClass = `promo-wrap--${validVariant}`;
-        
-        // Remove any existing variant classes before adding the current one
-        node.classList.remove("promo-wrap--left-border", "promo-wrap--full-background", "promo-wrap--card-elevated");
-        node.classList.add(variantClass);
-
-        // If this wrap has a data-badge attribute, inject a badge element
-        const badgeText = node.getAttribute("data-badge")?.trim();
-        if (badgeText && !node.querySelector(".promo-badge")) {
-          // Create badge container
-          const badge = document.createElement("span");
-          badge.className = "promo-badge";
-          badge.textContent = badgeText;
-
-          // Add icon before text
-          try {
-            const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
-            const iconWrapper = document.createElement("span");
-            iconWrapper.className = "promo-badge__icon";
-            iconWrapper.innerHTML = iconHTML(iconName);
-            iconWrapper.setAttribute("aria-hidden", "true");
-            badge.prepend(iconWrapper);
-          } catch (error) {
-            // Fallback: badge renders with text only if icon fails
-            // eslint-disable-next-line no-console
-            console.warn("[Topic Promo] Failed to generate badge icon:", error);
-          }
-
-          // Append badge to the promo container
-          node.appendChild(badge);
-        }
       });
     },
     { id: "promo-wrap-anchor" }
