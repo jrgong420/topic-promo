@@ -135,67 +135,54 @@
   }
 }
 
-/* Badge display for promo containers with data-badge attribute */
-.cooked .d-wrap[data-wrap][id][data-badge] {
-  // Badge text label (extracted from data-badge attribute)
-  &::before {
-    content: attr(data-badge);
-    position: absolute;
-    inset-inline-start: var(--promo-pad);
-    top: 0;
-    transform: translateY(-50%);
+/* Badge display for promo containers (injected DOM element) */
+.cooked .d-wrap[data-wrap][id] .promo-badge {
+  // Positioning
+  position: absolute;
+  inset-inline-start: var(--promo-pad);
+  top: 0;
+  transform: translateY(-50%);
+  z-index: 2; // Above highlight overlay (z-index: 1)
+  pointer-events: none; // Badge is decorative
 
-    // Styling
-    background: var(--tertiary);
-    color: var(--secondary);
-    padding: 0.25rem 0.6rem 0.25rem 1.8rem; // Extra left padding for icon
-    border-radius: var(--border-radius);
-    font-size: var(--font-down-1);
-    font-weight: 600;
-    line-height: 1.2;
-    white-space: nowrap;
+  // Layout
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 
-    // Ensure badge appears above highlight overlay
-    z-index: 2;
+  // Styling
+  background: var(--tertiary);
+  color: var(--secondary);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--border-radius);
+  font-size: var(--font-down-1);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
 
-    // Subtle shadow for depth
-    box-shadow: 0 2px 4px rgb(0 0 0 / 15%);
-  }
+  // Subtle shadow for depth
+  box-shadow: 0 2px 4px rgb(0 0 0 / 15%);
+}
 
-  // Badge icon (rendered via CSS mask with icon from settings)
-  &::after {
-    content: "";
-    position: absolute;
-    inset-inline-start: calc(var(--promo-pad) + 0.45rem);
-    top: 0;
-    transform: translateY(-50%);
+// Badge icon styling
+.cooked .d-wrap[data-wrap][id] .promo-badge__icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 
-    // Icon sizing
+  .d-icon {
     width: 1em;
     height: 1em;
-    font-size: var(--font-down-1);
-
-    // Render icon via mask (set by JS from settings.promo_button_icon)
-    background: var(--secondary);
-    mask-image: var(--promo-badge-icon);
-    mask-size: contain;
-    mask-repeat: no-repeat;
-    mask-position: center;
-
-    // Ensure icon appears above badge background
-    z-index: 3;
+    fill: currentcolor;
+    margin-inline-end: 0;
   }
 }
 
-// Mobile: reduce badge padding for compact display
+// Mobile: reduce badge size for compact display
 @media (width <= 767px) {
-  .cooked .d-wrap[data-wrap][id][data-badge]::before {
-    padding: 0.2rem 0.5rem 0.2rem 1.6rem;
+  .cooked .d-wrap[data-wrap][id] .promo-badge {
+    padding: 0.2rem 0.5rem;
     font-size: var(--font-down-2);
-  }
-
-  .cooked .d-wrap[data-wrap][id][data-badge]::after {
-    inset-inline-start: calc(var(--promo-pad) + 0.35rem);
-    font-size: var(--font-down-2);
+    gap: 0.25rem;
   }
 }

@@ -94,26 +94,41 @@ export default apiInitializer((api) => {
         node.id = anchor;
         assignedAnchors.add(anchor);
 
-        // If this wrap has a data-badge attribute, set up the badge icon CSS variable
-        const badgeText = node.getAttribute("data-badge");
-        if (badgeText && badgeText.trim()) {
+        // Apply BEM classes for styling variants
+        node.classList.add("promo-wrap");
+        const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
+        const allowedVariants = new Set(["left-border", "full-background", "card-elevated"]);
+        const validVariant = allowedVariants.has(variant) ? variant : "left-border";
+        const variantClass = `promo-wrap--${validVariant}`;
+        
+        // Remove any existing variant classes before adding the current one
+        node.classList.remove("promo-wrap--left-border", "promo-wrap--full-background", "promo-wrap--card-elevated");
+        node.classList.add(variantClass);
+
+        // If this wrap has a data-badge attribute, inject a badge element
+        const badgeText = node.getAttribute("data-badge")?.trim();
+        if (badgeText && !node.querySelector(".promo-badge")) {
+          // Create badge container
+          const badge = document.createElement("span");
+          badge.className = "promo-badge";
+          badge.textContent = badgeText;
+
+          // Add icon before text
           try {
-            // Get icon name from settings (same icon as promo button)
             const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
-
-            // Generate SVG icon HTML
-            const svgIcon = iconHTML(iconName);
-
-            // Create data URL for CSS mask-image
-            const dataUrl = `url("data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}")`;
-
-            // Set CSS custom property on the element
-            node.style.setProperty("--promo-badge-icon", dataUrl);
+            const iconWrapper = document.createElement("span");
+            iconWrapper.className = "promo-badge__icon";
+            iconWrapper.innerHTML = iconHTML(iconName);
+            iconWrapper.setAttribute("aria-hidden", "true");
+            badge.prepend(iconWrapper);
           } catch (error) {
-            // Fallback: if icon generation fails, badge will still render with text only
+            // Fallback: badge renders with text only if icon fails
             // eslint-disable-next-line no-console
             console.warn("[Topic Promo] Failed to generate badge icon:", error);
           }
+
+          // Append badge to the promo container
+          node.appendChild(badge);
         }
       });
     },
