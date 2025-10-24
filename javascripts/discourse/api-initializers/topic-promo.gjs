@@ -32,11 +32,10 @@ export default apiInitializer((api) => {
   api.decorateCooked(
     (elem, helper) => {
       const post = helper?.getModel?.();
-
-      // Only process the first post
-      if (!post || post.post_number !== 1) {
+      if (!post) {
         return;
       }
+      const isFirstPost = post.post_number === 1;
 
       // Avoid reprocessing the same post
       if (processedPosts.has(post.id)) {
@@ -77,7 +76,14 @@ export default apiInitializer((api) => {
         if (!promoTags.includes(normalizedTag)) {
           return;
         }
-
+        // Apply promo block style classes based on theme setting
+        node.classList.add("promo-wrap");
+        const variant = (settings.promo_block_style || "left-border").trim();
+        if (variant === "full-background") {
+          node.classList.add("promo-wrap--full-background");
+        } else if (variant === "card-elevated") {
+          node.classList.add("promo-wrap--card-elevated");
+        }
 
         // Badge support: set CSS var for icon and inject icon element
         const badgeText = node.getAttribute("data-badge");
@@ -105,19 +111,21 @@ export default apiInitializer((api) => {
         // Generate safe anchor ID
         const anchor = safeSlug(normalizedTag);
 
-        // Skip if we've already assigned this anchor or if it already exists in the DOM
-        if (assignedAnchors.has(anchor)) {
-          return;
-        }
+        if (isFirstPost) {
+          // Skip if we've already assigned this anchor or if it already exists in the DOM
+          if (assignedAnchors.has(anchor)) {
+            return;
+          }
 
-        // Check for collision with existing IDs (e.g., heading anchors)
-        if (element.querySelector(`#${CSS.escape(anchor)}`)) {
-          return;
-        }
+          // Check for collision with existing IDs (e.g., heading anchors)
+          if (element.querySelector(`#${CSS.escape(anchor)}`)) {
+            return;
+          }
 
-        // Assign the ID to this element
-        node.id = anchor;
-        assignedAnchors.add(anchor);
+          // Assign the ID to this element
+          node.id = anchor;
+          assignedAnchors.add(anchor);
+        }
       });
     },
     { id: "promo-wrap-anchor" }
