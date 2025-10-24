@@ -1,4 +1,5 @@
 import { apiInitializer } from "discourse/lib/api";
+import { iconHTML } from "discourse/lib/icon-library";
 
 export default apiInitializer((api) => {
   // Parse configured promo tags
@@ -18,8 +19,13 @@ export default apiInitializer((api) => {
       .replace(/[^a-z0-9-]/g, "");
   };
 
-  // Note: Do not track processed posts globally. decorateCooked must re-run on SPA re-renders
-  // (e.g., timeline scrubber virtualization) so IDs/classes are re-applied idempotently.
+  // Track processed posts to avoid reprocessing
+  const processedPosts = new Set();
+
+  // Clear state on page change
+  api.onPageChange(() => {
+    processedPosts.clear();
+  });
 
   // Decorate cooked content to add anchor IDs to matching .d-wrap elements
   api.decorateCooked(
@@ -31,7 +37,11 @@ export default apiInitializer((api) => {
         return;
       }
 
-
+      // Avoid reprocessing the same post
+      if (processedPosts.has(post.id)) {
+        return;
+      }
+      processedPosts.add(post.id);
 
       const promoTags = getPromoTags();
       if (!promoTags.length) {
@@ -84,33 +94,28 @@ export default apiInitializer((api) => {
         node.id = anchor;
         assignedAnchors.add(anchor);
 
-        // Apply BEM classes for styling variants (idempotent - safe to re-apply)
-        try {
-          node.classList.add("promo-wrap");
-          const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
-          const allowed = new Set(["left-border", "full-background", "card-elevated"]);
-          const v = allowed.has(variant) ? variant : "left-border";
-          const variantClass = `promo-wrap--${v}`;
+        // If this wrap has a data-badge attribute, set up the badge icon CSS variable
+        const badgeText = node.getAttribute("data-badge");
+        if (badgeText && badgeText.trim()) {
+          try {
+            // Get icon name from settings (same icon as promo button)
+            const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
 
-          // Remove any existing variant classes before adding the current one
-          node.classList.remove("promo-wrap--left-border", "promo-wrap--full-background", "promo-wrap--card-elevated");
-          node.classList.add(variantClass);
-        } catch {
-          // no-op if classList not available
+            // Generate SVG icon HTML
+            const svgIcon = iconHTML(iconName);
+
+            // Create data URL for CSS mask-image
+            const dataUrl = `url("data:image/svg+xml;utf8,${encodeURIComponent(svgIcon)}")`;
+
+            // Set CSS custom property on the element
+            node.style.setProperty("--promo-badge-icon", dataUrl);
+          } catch (error) {
+            // Fallback: if icon generation fails, badge will still render with text only
+            // eslint-disable-next-line no-console
+            console.warn("[Topic Promo] Failed to generate badge icon:", error);
+          }
         }
       });
-
-      // Add sentinel element for scroll detection (idempotent - check if exists first)
-      if (!element.querySelector(".promo-first-post-sentinel")) {
-        const sentinel = document.createElement("div");
-        sentinel.className = "promo-first-post-sentinel";
-        sentinel.setAttribute("aria-hidden", "true");
-        element.appendChild(sentinel);
-        try {
-          // eslint-disable-next-line no-console
-          console.debug("[Topic Promo][decorateCooked] added sentinel", { postId: post.id });
-        } catch {}
-      }
     },
     { id: "promo-wrap-anchor" }
   );
