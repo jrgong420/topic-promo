@@ -1,4 +1,6 @@
 import { apiInitializer } from "discourse/lib/api";
+import { iconHTML } from "discourse/lib/icon-library";
+
 
 export default apiInitializer((api) => {
   // Parse configured promo tags
@@ -18,8 +20,13 @@ export default apiInitializer((api) => {
       .replace(/[^a-z0-9-]/g, "");
   };
 
-  // Note: Do not track processed posts globally. decorateCooked must re-run on SPA re-renders
-  // (e.g., timeline scrubber virtualization) so IDs/classes are re-applied idempotently.
+  // Track processed posts to avoid reprocessing
+  const processedPosts = new Set();
+
+  // Clear state on page change
+  api.onPageChange(() => {
+    processedPosts.clear();
+  });
 
   // Decorate cooked content to add anchor IDs to matching .d-wrap elements
   api.decorateCooked(
@@ -31,7 +38,11 @@ export default apiInitializer((api) => {
         return;
       }
 
-
+      // Avoid reprocessing the same post
+      if (processedPosts.has(post.id)) {
+        return;
+      }
+      processedPosts.add(post.id);
 
       const promoTags = getPromoTags();
       if (!promoTags.length) {
@@ -67,6 +78,36 @@ export default apiInitializer((api) => {
           return;
         }
 
+        // Badge icon injection (inline SVG)
+        const badgeText = node.getAttribute("data-badge");
+        if (badgeText && badgeText.trim()) {
+          let svgIcon = null;
+          try {
+            const iconName = (settings.promo_button_icon || "gift").trim() || "gift";
+            svgIcon = iconHTML(iconName);
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.warn("[Topic Promo] Failed to generate badge icon:", e);
+          }
+
+          let iconEl = node.querySelector(":scope > .promo-wrap__badge-icon");
+          if (!iconEl) {
+            iconEl = document.createElement("span");
+            iconEl.className = "promo-wrap__badge-icon";
+            iconEl.setAttribute("aria-hidden", "true");
+            node.appendChild(iconEl);
+          }
+
+          if (svgIcon) {
+            iconEl.innerHTML = svgIcon;
+          }
+
+          // Disable mask-based rendering for inline SVG approach
+          iconEl.style.background = "none";
+          iconEl.style.maskImage = "none";
+          iconEl.style.webkitMaskImage = "none";
+        }
+
         // Generate safe anchor ID
         const anchor = safeSlug(normalizedTag);
 
@@ -83,34 +124,7 @@ export default apiInitializer((api) => {
         // Assign the ID to this element
         node.id = anchor;
         assignedAnchors.add(anchor);
-
-        // Apply BEM classes for styling variants (idempotent - safe to re-apply)
-        try {
-          node.classList.add("promo-wrap");
-          const variant = (settings.promo_block_style || "left-border").trim().toLowerCase();
-          const allowed = new Set(["left-border", "full-background", "card-elevated"]);
-          const v = allowed.has(variant) ? variant : "left-border";
-          const variantClass = `promo-wrap--${v}`;
-
-          // Remove any existing variant classes before adding the current one
-          node.classList.remove("promo-wrap--left-border", "promo-wrap--full-background", "promo-wrap--card-elevated");
-          node.classList.add(variantClass);
-        } catch {
-          // no-op if classList not available
-        }
       });
-
-      // Add sentinel element for scroll detection (idempotent - check if exists first)
-      if (!element.querySelector(".promo-first-post-sentinel")) {
-        const sentinel = document.createElement("div");
-        sentinel.className = "promo-first-post-sentinel";
-        sentinel.setAttribute("aria-hidden", "true");
-        element.appendChild(sentinel);
-        try {
-          // eslint-disable-next-line no-console
-          console.debug("[Topic Promo][decorateCooked] added sentinel", { postId: post.id });
-        } catch {}
-      }
     },
     { id: "promo-wrap-anchor" }
   );
