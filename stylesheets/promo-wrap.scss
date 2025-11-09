@@ -115,16 +115,8 @@
     transform: translateZ(0);
     transition: box-shadow 0.2s ease, transform 0.2s ease;
 
-    &::before {
-      content: "";
-      position: absolute;
-      inset-inline: 0;
-      top: 0;
-      height: 4px;
-      border-top-left-radius: inherit;
-      border-top-right-radius: inherit;
-      background: var(--promo-accent);
-    }
+    // Use a real border for the accent bar to free ::before for badge label
+    border-top: 4px solid var(--promo-accent);
 
     @media (hover: hover) {
       &:hover {
@@ -132,5 +124,71 @@
         box-shadow: 0 10px 24px rgb(0, 0, 0, 0.16), 0 2px 8px rgb(0, 0, 0, 0.08);
       }
     }
+  }
+}
+
+/* Badge display for promo containers with data-badge attribute */
+.cooked .d-wrap[data-wrap][id][data-badge] {
+  // Badge text label (extracted from data-badge attribute)
+  &::before {
+    content: attr(data-badge);
+    position: absolute;
+    inset-inline-start: var(--promo-pad);
+    top: 0;
+    transform: translateY(-50%);
+
+    // Styling
+    background: var(--tertiary);
+    color: var(--secondary);
+    padding: 0.25rem 0.6rem 0.25rem 1.8rem; // Extra left padding for icon
+    border-radius: var(--border-radius);
+    font-size: var(--font-down-1);
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+
+    // Interaction + stacking
+    pointer-events: none;
+    z-index: 2;
+
+    // Subtle shadow for depth
+    box-shadow: 0 2px 4px rgb(0 0 0 / 15%);
+  }
+
+  // Badge icon element (injected by decorateCooked as .promo-wrap__badge-icon)
+  > .promo-wrap__badge-icon {
+    position: absolute;
+    inset-inline-start: calc(var(--promo-pad) + 0.45rem);
+    top: 0;
+    transform: translateY(-50%);
+
+    // Icon sizing
+    width: 1em;
+    height: 1em;
+    font-size: var(--font-down-1);
+
+    // Render icon via mask (set by JS from settings.promo_button_icon)
+    background: var(--secondary);
+    mask-image: var(--promo-badge-icon);
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+
+    // Ensure icon appears above badge background
+    z-index: 3;
+    pointer-events: none;
+  }
+}
+
+// Mobile: reduce badge padding for compact display
+@media (width <= 767px) {
+  .cooked .d-wrap[data-wrap][id][data-badge]::before {
+    padding: 0.2rem 0.5rem 0.2rem 1.6rem;
+    font-size: var(--font-down-2);
+  }
+
+  .cooked .d-wrap[data-wrap][id][data-badge] > .promo-wrap__badge-icon {
+    inset-inline-start: calc(var(--promo-pad) + 0.35rem);
+    font-size: var(--font-down-2);
   }
 }
