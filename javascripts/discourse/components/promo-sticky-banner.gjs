@@ -53,31 +53,38 @@ export default class PromoStickyBanner extends Component {
     super(...arguments);
     this._log("constructor init", { outletArgs: Object.keys(this.args?.outletArgs || {}) });
     this._routeDidChange = () => {
-      this._log("routeDidChange");
       // Reset per-view state when navigating between routes/topics
       this.dismissed = false;
       this.anchorFound = false;
+      // Always stop existing observers/timers
+      this._stopAnchorPoll();
       this._teardownScrollObserver();
       this._initScrollStateFromURL();
-      if (!this._anchorPollId) {
-        this._startAnchorPoll();
+
+      // Only operate on topic routes and when banner is allowed
+      if (this.canCheck) {
+        this._maybeStartAnchorPoll();
+        // Setup scroll observer after render (topic view only)
+        schedule("afterRender", () => {
+          if (this.canCheck) {
+            this._setupScrollObserver();
+          }
+        });
       }
-      // Setup scroll observer after render
-      schedule("afterRender", () => {
-        this._setupScrollObserver();
-      });
-      this._stateSummary("routeDidChange-reset");
     };
     try {
       this.router?.on?.("routeDidChange", this._routeDidChange);
     } catch {}
+
     this._initScrollStateFromURL();
-    this._startAnchorPoll();
-    // Setup scroll observer after initial render
-    schedule("afterRender", () => {
-      this._setupScrollObserver();
-    });
-    this._stateSummary("constructor");
+    if (this.canCheck) {
+      this._maybeStartAnchorPoll();
+      schedule("afterRender", () => {
+        if (this.canCheck) {
+          this._setupScrollObserver();
+        }
+      });
+    }
   }
 
   willDestroy() {
@@ -167,8 +174,43 @@ export default class PromoStickyBanner extends Component {
     this.anchorFound = !!this.anchorElement;
   }
 
+  get isTopicRoute() {
+    try {
+      const name = this.router?.currentRouteName || "";
+      return typeof name === "string" && (name === "topic" || name.startsWith("topic."));
+    } catch {
+      return false;
+    }
+  }
+
+  get canCheck() {
+    return this.isTopicRoute && this.deviceAllowed && !!this.currentTopic;
+  }
+
+  _stopAnchorPoll() {
+    if (this._anchorPollId) {
+      clearInterval(this._anchorPollId);
+      this._anchorPollId = null;
+    }
+  }
+
+  _maybeStartAnchorPoll() {
+    if (this._anchorPollId) {
+      return;
+    }
+    if (!this.canCheck || !this.anchorId) {
+      return;
+    }
+    this._startAnchorPoll();
+  }
+
+
   _startAnchorPoll() {
-    // Poll for a short period to allow first post render + decorateCooked
+    // Guard: only poll on topic routes with a valid anchor and when allowed
+    if (!this.canCheck || !this.anchorId) {
+      return;
+    }
+
     let attempts = 0;
     const maxAttempts = 50; // ~15s at 300ms
     this._log("anchor poll start", { anchorId: this.anchorId, maxAttempts });
@@ -176,18 +218,18 @@ export default class PromoStickyBanner extends Component {
       attempts++;
       const wasFound = this.anchorFound;
       this._updateAnchorFound();
-      this._log("anchor poll attempt", attempts, { anchorId: this.anchorId, found: this.anchorFound });
       if (!wasFound && this.anchorFound) {
         this._log("anchor found", { anchorId: this.anchorId, hasAnchorEl: !!this.anchorElement });
-        this._stateSummary("anchor-found");
       }
-      if (this.anchorFound || attempts >= maxAttempts) {
+      if (!this.canCheck || this.anchorFound || attempts >= maxAttempts) {
         clearInterval(this._anchorPollId);
         this._anchorPollId = null;
         this._log("anchor poll end", { attempts, found: this.anchorFound });
-        // Setup scroll observer once anchor is found or polling ends
+        // Setup scroll observer once anchor is found or polling ends (topic view only)
         schedule("afterRender", () => {
-          this._setupScrollObserver();
+          if (this.canCheck) {
+            this._setupScrollObserver();
+          }
         });
       }
     }, 300);
@@ -212,7 +254,7 @@ export default class PromoStickyBanner extends Component {
       if (match) {
         const postNumber = parseInt(match[1], 10);
         this.scrolledPastFirstPost = postNumber > 1;
-        this._log("init scroll state from URL", { postNumber, scrolledPast: this.scrolledPastFirstPost });
+
       } else {
         this.scrolledPastFirstPost = false;
       }
@@ -228,7 +270,6 @@ export default class PromoStickyBanner extends Component {
 
     const sentinel = document.querySelector(".promo-first-post-sentinel");
     if (!sentinel) {
-      this._log("scroll observer: sentinel not found");
       return;
     }
 
@@ -242,11 +283,6 @@ export default class PromoStickyBanner extends Component {
           const pastFirstPost = !entry.isIntersecting;
           if (this.scrolledPastFirstPost !== pastFirstPost) {
             this.scrolledPastFirstPost = pastFirstPost;
-            this._log("scroll state changed", {
-              scrolledPast: pastFirstPost,
-              isIntersecting: entry.isIntersecting
-            });
-            this._stateSummary("scroll-changed");
           }
         },
         {
@@ -257,9 +293,8 @@ export default class PromoStickyBanner extends Component {
       );
 
       this._intersectionObserver.observe(sentinel);
-      this._log("scroll observer setup", { headerOffset, rootMargin });
     } catch (error) {
-      this._log("scroll observer setup failed", error);
+      // no-op
     }
   }
 
@@ -268,7 +303,6 @@ export default class PromoStickyBanner extends Component {
     if (this._intersectionObserver) {
       this._intersectionObserver.disconnect();
       this._intersectionObserver = null;
-      this._log("scroll observer teardown");
     }
   }
 
@@ -380,7 +414,6 @@ export default class PromoStickyBanner extends Component {
     }
 
     this.dismissed = true;
-    this._stateSummary("dismissed");
   }
 
   <template>
